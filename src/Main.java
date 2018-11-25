@@ -81,40 +81,81 @@ public class Main {
 
     public static void main(String[] args) throws NoSuchAlgorithmException, UnsupportedEncodingException, NoSuchPaddingException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
-        int bitLength = 16;
+        int bitLength = 25;
         SecureRandom sr = new SecureRandom();
+
+
+        System.out.println("How many people will be in this conversation?");
+        Scanner s = new Scanner(System.in);
+        String temp = s.nextLine();
+        int liczba = Integer.parseInt(temp);
+
+        BigInteger [] secretKeys = new BigInteger[liczba];
+
+
         BigInteger prime = BigInteger.probablePrime(bitLength - 2, sr);
         BigInteger primitiveRoot = findPrimeRoot(prime);
-        BigInteger secretKeyA = new BigInteger(bitLength - 2, sr);
-        BigInteger secretKeyB = new BigInteger(bitLength - 2, sr);
 
         System.out.println(prime);
         System.out.println(primitiveRoot);
 
-        BigInteger publicKeyA = primitiveRoot.modPow(secretKeyA,prime);
-        BigInteger publicKeyB = primitiveRoot.modPow(secretKeyB,prime);
+        for(int i=0;i<secretKeys.length;i++)
+        {
+            secretKeys[i] = new BigInteger(bitLength-2,sr);
+        }
 
-        System.out.println("The public key of the person A is " + publicKeyA);
-        System.out.println("The public key of the person B is " + publicKeyB);
+        BigInteger [] publicKeys = new BigInteger[liczba];
 
-        BigInteger sharedKeyA = publicKeyB.modPow(secretKeyA,prime);
-        BigInteger sharedKeyB = publicKeyA.modPow(secretKeyB,prime);
+        for(int i=0;i<publicKeys.length;i++)
+        {
+            publicKeys[i] =  primitiveRoot.modPow(secretKeys[i],prime);
+        }
+
+        for(int i=0;i<secretKeys.length;i++)
+        {
+            System.out.println("The public key of the person "+ i + " is " + publicKeys[i]);
+        }
+
+
+        BigInteger [] sharedKeys = Arrays.copyOf(publicKeys,publicKeys.length);
+
+        for(int i=0;i<sharedKeys.length;i++) {
+            BigInteger[] tempo = Arrays.copyOf(sharedKeys, sharedKeys.length);
+            // BigInteger [] temp1 = Arrays.copyOf(sharedKeys,sharedKeys.length);
+            int pom2 = (i + 2) % liczba;
+            int counter=i;
+            for (int j = 1; j < liczba; j++){
+                int pom = (counter + 1) % liczba;
+                if(j==1){tempo[pom] = publicKeys[counter].modPow(secretKeys[pom], prime);}
+                else {
+                    tempo[pom]= tempo[counter].modPow(secretKeys[pom],prime);
+                }
+                counter++;
+                if(counter==liczba){counter=0;}
+            }
+            sharedKeys[counter] = tempo[counter];
+        }
 
         System.out.println();
-        System.out.println("The shared key of the person A is " + sharedKeyA);
-        System.out.println("The shared key of the person B is " + sharedKeyB);
-
-        String aValue = sharedKeyA.toString();
-        String bValue = sharedKeyB.toString();
-
+        for(int i=0;i<secretKeys.length;i++)
+        {
+            System.out.println("The shared key of the person "+ i + " is " + sharedKeys[i]);
+        }
 
 
+
+
+
+        String aValue = sharedKeys[0].toString();
+        String bValue = sharedKeys[1].toString();
+
+
+
+        System.out.println();
         byte data [] = "Tojesttestowawiadomosc".getBytes("UTF-8");
-
+        String dataS=new String(data,"UTF-8");
+        System.out.println("Plain massage "+ dataS);
         byte key [] = aValue.getBytes("UTF-8");
-
-        MessageDigest sha = MessageDigest.getInstance("SHA-256");
-        key = sha.digest(key);
         key = Arrays.copyOf(key,16);
         SecretKeySpec spec = new SecretKeySpec(key,"AES");
 
@@ -124,18 +165,20 @@ public class Main {
         byte [] encrypted = cipher.doFinal(data);
 
         System.out.println();
-        System.out.println(encrypted);
+        String encryptedS=new String(encrypted,"UTF-8");
+        System.out.println("Ciphered message " + encryptedS);
 
-//        key = bValue.getBytes();
-//        key = sha.digest(key);
-//        key = Arrays.copyOf(key,16);
-//        SecretKeySpec spec1 = new SecretKeySpec(key,"AES");
+        key = bValue.getBytes();
 
-        cipher.init(Cipher.DECRYPT_MODE,spec);
+        key = Arrays.copyOf(key,16);
+        SecretKeySpec spec1 = new SecretKeySpec(key,"AES");
+
+        cipher.init(Cipher.DECRYPT_MODE,spec1);
         byte [] decrypted = cipher.doFinal(encrypted);
 
         System.out.println();
-        System.out.println(decrypted);
+        String decryptedS=new String(decrypted,"UTF-8");
+        System.out.println("Deciphred message with key B "+decryptedS);
     }
 
 
